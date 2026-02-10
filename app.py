@@ -125,12 +125,12 @@ def main():
         top_2 = res[:2]
         bottom_2 = res[-2:]
 
-        st.markdown("### 🏆 Le tue risorse principali")
+        st.markdown("### Le tue risorse principali")
         for dim, score in top_2:
             st.markdown(f"**{dim}** (Punteggio: {score:.2f})")
             st.write(f"_{DESCRIZIONI_RYFF[dim]}_")
 
-        st.markdown("### 🌱 Aree da rafforzare")
+        st.markdown("### Aree da rafforzare")
         for dim, score in bottom_2:
             st.markdown(f"**{dim}** (Punteggio: {score:.2f})")
             st.write(f"_{DESCRIZIONI_RYFF[dim]}_")
