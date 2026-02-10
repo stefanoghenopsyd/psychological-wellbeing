@@ -1,233 +1,163 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-import os
-
-# --- CONFIGURAZIONE PAGINA ---
-st.set_page_config(page_title="Autovalutazione Benessere Ryff", layout="centered")
-
-# --- FUNZIONI UTILI ---
-
-def mostra_logo():
-    """Tenta di caricare il logo, gestisce il caso in cui il file manchi."""
-    nome_file = "GENERA Logo Colore.png"
-    if os.path.exists(nome_file):
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.image(nome_file, use_container_width=True)
-    else:
-        st.warning(f"Nota: Immagine '{nome_file}' non trovata nella directory.")
-
-def calcola_punteggi(risposte, mappatura):
-    """Calcola i punteggi medi per ogni dimensione."""
-    punteggi = {}
-    for dimensione, items in mappatura.items():
-        valori = [risposte[item] for item in items]
-        punteggi[dimensione] = sum(valori) / len(valori)
-    return punteggi
-
-def crea_grafico_radar(punteggi):
-    """Genera il grafico radar con Plotly."""
-    categorie = list(punteggi.keys())
-    valori = list(punteggi.values())
-    
-    # Chiudere il cerchio del radar
-    valori += values[:1]
-    categorie += categories[:1]
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatterpolar(
-        r=valori,
-        theta=categorie,
-        fill='toself',
-        name='Il tuo profilo',
-        line_color='#4CAF50'
-    ))
-
-    fig.update_layout(
-        polar=dict(
-            radialaxis=dict(
-                visible=True,
-                range=[0, 6]  # Scala da 0 a 6
-            )),
-        showlegend=False,
-        title="Mappa delle Risorse di Benessere"
-    )
-    return fig
-
-# --- DATI DEL MODELLO RYFF (ITEMS E DIMENSIONI) ---
-# Nota: Questi sono items adattati a scopo dimostrativo basati sul modello Ryff.
-# In un contesto clinico reale, vanno usati gli item validati e protetti da copyright.
-
-domande = {
-    "AUT1": "Tendo a essere influenzato/a da persone con opinioni forti.", # Inverso
-    "AUT2": "Ho fiducia nelle mie opinioni, anche se sono contrarie al consenso generale.",
-    "PAD1": "In generale, sento di essere responsabile della situazione in cui vivo.",
-    "PAD2": "Le richieste della vita quotidiana spesso mi abbattono.", # Inverso
-    "CRE1": "Penso che sia importante avere nuove esperienze che sfidino il modo in cui penso a me stesso/a e al mondo.",
-    "CRE2": "Non mi interessa molto provare a migliorare o cambiare me stesso/a.", # Inverso
-    "REL1": "So che posso fidarmi dei miei amici, e loro sanno che possono fidarsi di me.",
-    "REL2": "Spesso mi sento solo/a perché ho pochi amici intimi con cui condividere le mie preoccupazioni.", # Inverso
-    "SCO1": "Ho un senso di direzione e uno scopo nella vita.",
-    "SCO2": "Non ho una chiara idea di cosa sto cercando di realizzare nella vita.", # Inverso
-    "ACC1": "Quando guardo alla storia della mia vita, sono soddisfatto/a di come sono andate le cose.",
-    "ACC2": "In molti modi, mi sento deluso/a dai miei risultati nella vita." # Inverso
-}
-
-# Mappatura Item -> Dimensione
-mappa_dimensioni = {
-    "Autonomia": ["AUT1", "AUT2"],
-    "Padronanza Ambientale": ["PAD1", "PAD2"],
-    "Crescita Personale": ["CRE1", "CRE2"],
-    "Relazioni Positive": ["REL1", "REL2"],
-    "Scopo di Vita": ["SCO1", "SCO2"],
-    "Autoaccettazione": ["ACC1", "ACC2"]
-}
-
-# Items che necessitano di inversione del punteggio (se 6 diventa 1, ecc.)
-items_inversi = ["AUT1", "PAD2", "CRE2", "REL2", "SCO2", "ACC2"]
-
-# --- INTERFACCIA UTENTE ---
-
-# 1. Header e Logo
-mostra_logo()
-st.title("Autovalutazione del Benessere Psicologico")
-st.markdown("---")
-
-# 2. Introduzione
-st.markdown("""
-### Il Modello di Carol Ryff
-Benvenuto/a. Questa applicazione si basa sul modello del **Psychological Well-being (PWB)** elaborato dalla psicologa Carol Ryff. 
-A differenza della visione edonica (benessere come semplice piacere), questo modello adotta una **prospettiva eudaimonica**: 
-il benessere è inteso come la realizzazione del proprio potenziale umano.
-
-L'obiettivo di questa autovalutazione non è fornire una diagnosi, ma **offrirti uno spunto di riflessione** sulle tue attuali risorse 
-psicologiche, aiutandoti a capire su quali punti di forza puoi contare e quali aree potresti voler nutrire.
-""")
-
-st.info("Compila i dati anagrafici e rispondi alle domande per visualizzare il tuo profilo.")
-
-# 3. Informazioni Socio-Anagrafiche
-with st.expander("📝 I tuoi dati (Clicca per espandere)", expanded=True):
-    col_a, col_b = st.columns(2)
-    
-    with col_a:
-        nome = st.text_input("Nome o Nickname")
-        eta = st.selectbox("Età", [
-            "Fino a 20 anni", "21-30 anni", "31-40 anni", 
-            "41-50 anni", "51-60 anni", "61-70 anni", "Più di 70 anni"
-        ])
-        titolo_studio = st.selectbox("Titolo di studio", [
-            "Licenza media", "Qualifica professionale", "Diploma di maturità", 
-            "Laurea triennale", "Laurea magistrale (o ciclo unico)", "Titolo post lauream"
-        ])
-
-    with col_b:
-        genere = st.radio("Genere", ["Maschile", "Femminile", "Non binario", "Non risponde"])
-        ruolo = st.selectbox("Ruolo professionale", [
-            "Imprenditore", "Top manager", "Middle manager", "Impiegato", 
-            "Operaio", "Tirocinante", "Libero professionista"
-        ])
-
-# 4. Questionario
-st.markdown("### Il Questionario")
-st.write("Indica quanto sei d'accordo con le seguenti affermazioni su una scala da 1 (Per nulla d'accordo) a 6 (Completamente d'accordo).")
-
-form = st.form(key='questionario_ryff')
-risposte_raw = {}
-
-# Opzioni Likert
-opzioni_likert = {
-    1: "1 - Fortemente in disaccordo",
-    2: "2 - In disaccordo",
-    3: "3 - Leggermente in disaccordo",
-    4: "4 - Leggermente d'accordo",
-    5: "5 - D'accordo",
-    6: "6 - Fortemente d'accordo"
-}
-
-for codice, testo in domande.items():
-    st.write(f"**{testo}**")
-    # Usiamo uno slider o radio button. Radio è più preciso per Likert discreta.
-    risposte_raw[codice] = st.radio(
-        f"Seleziona per: {testo}", 
-        options=[1, 2, 3, 4, 5, 6], 
-        format_func=lambda x: opzioni_likert[x],
-        horizontal=True,
-        key=codice,
-        label_visibility="collapsed"
-    )
-    st.markdown("---")
-
-submit_button = form.form_submit_button(label='Calcola il mio Profilo di Benessere')
-
-# --- ELABORAZIONE E FEEDBACK ---
-
-if submit_button:
-    if not nome:
-        st.error("Per favore, inserisci un nome o nickname per procedere.")
-    else:
-        # 1. Normalizzazione Punteggi (Gestione Inversi)
-        risposte_elaborate = {}
-        for k, v in risposte_raw.items():
-            if k in items_inversi:
-                risposte_elaborate[k] = 7 - v  # Inversione su scala 6 (7 - x)
-            else:
-                risposte_elaborate[k] = v
-
-        # 2. Calcolo Medie per Dimensione
-        punteggi_dim = calcola_punteggi(risposte_elaborate, mappa_dimensioni)
-        
-        # 3. Preparazione Dati Grafici
-        categories = list(punteggi_dim.keys())
-        values = list(punteggi_dim.values())
-
-        # 4. Visualizzazione Risultati
-        st.markdown(f"## Risultati per {nome}")
-        
-        # Grafico Radar
-        col_graph, col_desc = st.columns([1, 1])
-        
-        with col_graph:
-            fig = crea_grafico_radar(punteggi_dim)
-            st.plotly_chart(fig, use_container_width=True)
-
-        # Logica per il Feedback Descrittivo
-        punteggi_ordinati = sorted(punteggi_dim.items(), key=lambda x: x[1], reverse=True)
-        top_2 = punteggi_ordinati[:2]
-        bottom_2 = punteggi_ordinati[-2:]
-        
-        media_totale = sum(values) / len(values)
-        media_teorica = 3.5 # Scala 1-6
-
-        with col_desc:
-            st.markdown("### Feedback Descrittivo")
-            
-            # Punti di Forza
-            st.success(f"🌟 **Le tue risorse principali:**\n\n"
-                       f"Le aree in cui mostri maggiore solidità sono **{top_2[0][0]}** e **{top_2[1][0]}**. "
-                       f"Questi sono i pilastri su cui puoi contare nei momenti di difficoltà.")
-            
-            # Aree di Miglioramento
-            st.warning(f"🌱 **Aree da rafforzare:**\n\n"
-                       f"I punteggi suggeriscono che potresti trarre beneficio lavorando su **{bottom_2[1][0]}** e **{bottom_2[0][0]}**. "
-                       f"Non vederli come deficit, ma come opportunità di crescita personale.")
-
-            # Orientamento Eudaimonico
-            st.markdown("---")
-            if media_totale > media_teorica:
-                st.markdown("""
-                🎯 **Orientamento Eudaimonico Rilevato**
-                
-                Il tuo punteggio complessivo supera la media teorica. Questo indica un **buon orientamento al benessere eudaimonico**: 
-                sembri impegnato/a non solo nella ricerca della soddisfazione momentanea, ma nella costruzione di senso e nella 
-                realizzazione del tuo potenziale.
-                """)
-            else:
-                st.markdown("""
-                🎯 **Riflessione sull'Orientamento**
-                
-                Il tuo punteggio complessivo è vicino o sotto la media teorica. Questo potrebbe indicare un momento di stanchezza o 
-                una fase di transizione. È un ottimo momento per fermarsi e chiedersi cosa dà davvero significato alla tua quotidianità.
-                """)
+import numpy as np
+import matplotlib.pyplot as plt
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import random
+ 
+# --- 1. CONFIGURAZIONE E TESTI ---
+# Fattori del modello di Ryff
+FATTORI = [
+    "Autoaccettazione", "Relazioni Positive", "Autonomia", 
+    "Padronanza Ambientale", "Scopo nella Vita", "Crescita Personale"
+]
+ 
+# Definizione dei 12 item (2 per fattore)
+VOCI_QUESTIONARIO = [
+    {"testo": "In generale, mi sento fiducioso e positivo verso me stesso.", "fattore": "Autoaccettazione"},
+    {"testo": "Mi piacciono la maggior parte degli aspetti della mia personalità.", "fattore": "Autoaccettazione"},
+    {"testo": "Sento di avere relazioni calde e basate sulla fiducia con gli altri.", "fattore": "Relazioni Positive"},
+    {"testo": "Mi considero una persona capace di dare affetto e sostegno.", "fattore": "Relazioni Positive"},
+    {"testo": "Ho fiducia nelle mie opinioni, anche se diverse da quelle della massa.", "fattore": "Autonomia"},
+    {"testo": "Prendo decisioni basate su ciò che ritengo giusto, non sulle pressioni altrui.", "fattore": "Autonomia"},
+    {"testo": "Sento di essere in grado di influenzare l'ambiente che mi circonda.", "fattore": "Padronanza Ambientale"},
+    {"testo": "Riesco a gestire bene le responsabilità della mia vita quotidiana.", "fattore": "Padronanza Ambientale"},
+    {"testo": "Ho una chiara direzione e uno scopo nella mia vita.", "fattore": "Scopo nella Vita"},
+    {"testo": "Le mie attività quotidiane mi sembrano dotate di senso.", "fattore": "Scopo nella Vita"},
+    {"testo": "Sento di continuare a imparare e crescere come persona.", "fattore": "Crescita Personale"},
+    {"testo": "Sono aperto a nuove esperienze che mettono alla prova le mie visioni.", "fattore": "Crescita Personale"}
+]
+ 
+# --- 2. FUNZIONI LOGICHE ---
+def salva_su_google_sheet(riga):
+    """Salva i dati su Google Sheets utilizzando le credenziali st.secrets[cite: 20]."""
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds_dict = st.secrets["gcp_service_account"]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        client = gspread.authorize(creds)
+        # Nome del file su Drive (deve essere creato prima)
+        sheet = client.open("Database_Benessere_Ryff").sheet1
+        sheet.append_row(riga)
+        return True
+    except Exception as e:
+        st.error(f"Errore nel salvataggio dei dati: {e}") [cite: 23]
+        return False
+ 
+def crea_radar_chart(punteggi):
+    """Genera grafico radar con colori ispirati al logo."""
+    labels = list(punteggi.keys())
+    values = list(punteggi.values())
+    
+    # Colori GENERA (esempio teal/verde professionale)
+    color_line = "#1a5e5e"
+    color_fill = "#a8dadc"
+ 
+    num_vars = len(labels)
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+    values += values[:1]
+    angles += angles[:1]
+ 
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    ax.fill(angles, values, color=color_fill, alpha=0.4)
+    ax.plot(angles, values, color=color_line, linewidth=2)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels)
+    ax.set_ylim(0, 6)
+    return fig
+ 
+# --- 3. MAIN APP ---
+def main():
+    # Prima istruzione Streamlit obbligatoria [cite: 26]
+    st.set_page_config(page_title="Autovalutazione Benessere Ryff", layout="centered")
+ 
+    # Layout Logo e Titolo (Ridimensionamento automatico)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("GENERA Logo Colore.png", use_container_width=True) [cite: 42]
+        st.markdown("<h2 style='text-align: center;'>Autovalutazione Risorse di Benessere</h2>", unsafe_allow_html=True)
+ 
+    # Introduzione
+    st.markdown("""
+    ### Il Modello di Carol Ryff
+    Il benessere psicologico non è solo assenza di malessere, ma la realizzazione del proprio potenziale (prospettiva eudaimonica). 
+    Questo strumento analizza 6 fattori chiave: Autoaccettazione, Relazioni Positive, Autonomia, Padronanza Ambientale, Scopo nella Vita e Crescita Personale.
+    
+    **Obiettivo:** Riflettere sulle proprie risorse di benessere psicologico.
+    """)
+    st.write("proseguendo nella compilazione acconsento a che i dati raccolti saranno utilizzati in forma aggregata ed esclusivamente per finalità statistiche")
+ 
+    # Inizializzazione stato per gestione ricarica [cite: 27-28]
+    if 'submitted' not in st.session_state:
+        st.session_state.submitted = False
+        # Randomizzazione item solo all'inizio
+        st.session_state.items_random = random.sample(VOCI_QUESTIONARIO, len(VOCI_QUESTIONARIO))
+ 
+    if not st.session_state.submitted:
+        # Form per invio unico dei dati [cite: 29-30]
+        with st.form("questionario"):
+            st.subheader("Informazioni Socio-Anagrafiche")
+            identificativo = st.text_input("Nome o Nickname")
+            genere = st.selectbox("Genere", ["maschile", "femminile", "non binario", "non risponde"])
+            eta = st.selectbox("Età", ["fino a 20 anni", "21-30 anni", "31-40 anni", "41-50 anni", "51-60 anni", "61-70 anni", "più di 70 anni"])
+            studio = st.selectbox("Titolo di studio", ["licenza media", "qualifica professionale", "diploma di maturità", "laurea triennale", "laurea magistrale (o ciclo unico)", "titolo post lauream"])
+            job = st.selectbox("Job", ["imprenditore", "top manager", "middle manager", "impiegato", "operaio", "tirocinante", "libero professionista"])
+ 
+            st.subheader("Questionario")
+            risposte = {}
+            for i, item in enumerate(st.session_state.items_random):
+                risposte[item['testo']] = st.select_slider(
+                    f"{item['testo']}",
+                    options=[1, 2, 3, 4, 5, 6],
+                    key=f"item_{i}"
+                )
+ 
+            submit = st.form_submit_button("Invia Valutazione")
+ 
+            if submit:
+                if not identificativo:
+                    st.error("Per favore, inserisci un nome o nickname.")
+                else:
+                    # Calcolo punteggi per fattore
+                    punteggi_finali = {f: [] for f in FATTORI}
+                    for item in st.session_state.items_random:
+                        punteggi_finali[item['fattore']].append(risposte[item['testo']])
+                    
+                    media_fattori = {f: np.mean(v) for f, v in punteggi_finali.items()}
+                    
+                    # Preparazione riga database: id, genere, età, studio, job, item_scores...
+                    # Nota: l'ordine degli item nel DB segue l'ordine di VOCI_QUESTIONARIO originale
+                    voti_ordinati = [risposte[item['testo']] for item in VOCI_QUESTIONARIO]
+                    riga_db = [identificativo, genere, eta, studio, job] + voti_ordinati
+                    
+                    if salva_su_google_sheet(riga_db):
+                        st.session_state.media_fattori = media_fattori
+                        st.session_state.submitted = True
+                        st.rerun()
+    else:
+        # FEEDBACK
+        st.success("Analisi Completata!")
+        medie = st.session_state.media_fattori
+        
+        # Grafico Radar
+        st.pyplot(crea_radar_chart(medie))
+ 
+        # Analisi descrittiva
+        sorted_f = sorted(medie.items(), key=lambda x: x[1], reverse=True)
+        st.write(f"### Risorse principali: **{sorted_f[0][0]}** e **{sorted_f[1][0]}**")
+        st.write(f"### Aree da rafforzare: **{sorted_f[-1][0]}** e **{sorted_f[-2][0]}**")
+ 
+        # Orientamento eudaimonico
+        punteggio_totale = sum(medie.values())
+        media_teorica = 3.5 * 6 # Media Likert (3.5) per 6 fattori
+        if punteggio_totale > media_teorica:
+            st.balloons()
+            st.info("Il tuo profilo indica un forte orientamento eudaimonico al benessere.")
+ 
+    # Footer
+    st.markdown("---")
+    st.markdown("<p style='text-align: center; font-size: 0.8em;'>Powered by GÉNERA</p>", unsafe_allow_html=True)
+ 
+if __name__ == "__main__": [cite: 34-35]
+    main()
