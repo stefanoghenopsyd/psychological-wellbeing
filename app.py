@@ -7,8 +7,16 @@ from oauth2client.service_account import ServiceAccountCredentials
 import random
 from io import BytesIO
 
-# --- CONFIGURAZIONE ---
-FATTORI = ["Autoaccettazione", "Relazioni Positive", "Autonomia", "Padronanza Ambientale", "Scopo nella Vita", "Crescita Personale"]
+# --- 1. CONFIGURAZIONE E DESCRIZIONI ---
+# Definiamo le descrizioni qui per riutilizzarle sia nell'intro che nel feedback
+DESCRIZIONI_RYFF = {
+    "Autoaccettazione": "Possedere un atteggiamento positivo verso se stessi, accettando i propri limiti e valorizzando le proprie qualità e le esperienze passate.",
+    "Relazioni Positive": "Capacità di instaurare rapporti interpersonali profondi, caratterizzati da calore, fiducia, empatia e mutuo sostegno.",
+    "Autonomia": "Capacità di autodeterminazione e indipendenza, riuscendo a resistere alle pressioni sociali e a valutare se stessi secondo i propri standard.",
+    "Padronanza Ambientale": "Capacità di gestire l'ambiente circostante, sfruttando le opportunità e creando contesti adatti ai propri bisogni e valori.",
+    "Scopo nella Vita": "Senso di direzionalità e convinzione che la propria vita sia dotata di significato, grazie a obiettivi chiari e progetti futuri.",
+    "Crescita Personale": "Sentimento di continuo sviluppo e realizzazione del proprio potenziale, restando aperti a nuove esperienze e cambiamenti."
+}
 
 ITEM_POOL = [
     {"testo": "In generale, mi sento fiducioso e positivo verso me stesso.", "dim": "Autoaccettazione"},
@@ -22,15 +30,11 @@ ITEM_POOL = [
     {"testo": "Ho una chiara direzione e uno scopo nella mia vita.", "dim": "Scopo nella Vita"},
     {"testo": "Le mie attività quotidiane mi sembrano dotate di senso e valore.", "dim": "Scopo nella Vita"},
     {"testo": "Sento di continuare a imparare e crescere come persona.", "dim": "Crescita Personale"},
-    {"testo": "Sono aperto a nuove esperienze che sfidano il mio modo di vedere me stesso.", "dim": "Crescita Personale"}
+    {"testo": "Sono aperto a nuove esperienze che mettono alla prova le mie visioni.", "dim": "Crescita Personale"}
 ]
 
-# Colonne per il file CSV e Database
-COLONNE_ANAGRAFICA = ["identificativo", "genere", "età", "titolo di studio", "job"]
-COLONNE_ITEM = [it['testo'] for it in ITEM_POOL]
-
+# --- 2. FUNZIONI DI SUPPORTO ---
 def salva_online(riga):
-    """Tenta il salvataggio su Google Sheets [cite: 20-23]."""
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds_dict = st.secrets["gcp_service_account"]
@@ -51,22 +55,29 @@ def genera_radar(punteggi):
     angles += angles[:1]
     fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
     ax.fill(angles, values, color="#457b9d", alpha=0.4)
-    ax.plot(angles, values, color="#1d3557", linewidth=2)
+    ax.plot(angles, values, color="#1d3557", linewidth=2, marker='o')
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(labels, fontsize=9)
     ax.set_ylim(0, 6)
     return fig
 
+# --- 3. MAIN APP ---
 def main():
     st.set_page_config(page_title="GENERA - Benessere Ryff", layout="centered")
 
-    # Header
+    # Logo e Titolo
     st.image("GENERA Logo Colore.png", use_container_width=True)
     st.markdown("<h2 style='text-align: center;'>Autovalutazione Risorse di Benessere</h2>", unsafe_allow_html=True)
 
-    # Introduzione
-    st.write("Questa app ti aiuta a valutare le tue risorse di benessere psicologico. Il modello a cui ci riferiamo è quello dello "Psychological Welbeing" di Carol Ryff. Fondato su una lettura "eudaimonica" del benessere il modello identifica 6 fattori chiave che concorrono a determinare il nostro livello di benessere personale: "Autoaccettazione", riguarda il possedere un’atteggiamento positivo verso se stessi. Non significa solo "piacersi", ma riconoscere e accettare i propri limiti e le proprie qualità, sentendosi bene con chi si è stati in passato e chi si è oggi; "Relazioni Positive", riguarda la capacità di costruire legami profondi, basati sulla fiducia e sull'empatia. Chi ha punteggi alti in quest'area è capace di dare e ricevere amore, preoccupandosi del benessere altrui; "Autonomia", indica la capacità di resistere alle pressioni sociali, valutando se stessi secondo i propri standard personali e non solo in base al giudizio o alle aspettative degli altri; "Padronanza Ambientale", è il senso di competenza nel gestire l'ambiente circostante. Include la capacità di scegliere o creare contesti adatti ai propri bisogni e valori, riuscendo a destreggiarsi efficacemente tra le sfide della vita quotidiana; "Scopo nella Vita", è la sensazione che la propria vita abbia un senso, una direzione e degli obiettivi. Chi possiede un forte scopo sente che le proprie azioni presenti e passate sono cariche di significato; "Crescita Personale", indica il desiderio di continuare a svilupparsi come individuo. È l’apertura a nuove esperienze e la sensazione di espandere continuamente le proprie potenzialità, vedendo se stessi in un costante processo di miglioramento.")
-    st.info("Avvertenza: Il test è anonimo, proseguendo nella compilazione acconsenti a che i dati raccolti possano essere utilizzati in forma aggregata ed esclusivamente per finalità statistiche")
+    # Introduzione con definizioni
+    st.markdown("### Il Modello di Carol Ryff")
+    st.write("Il benessere psicologico secondo Carol Ryff si fonda su sei pilastri fondamentali. Ecco le definizioni delle dimensioni che andremo ad analizzare:")
+    
+    for dimensione, descrizione in DESCRIZIONI_RYFF.items():
+        st.markdown(f"- **{dimensione}**: {descrizione}")
+    
+    st.write("\n**Obiettivo:** Questa autovalutazione serve a riflettere sulle tue risorse di benessere psicologico.")
+    st.info("proseguendo nella compilazione acconsento a che i dati raccolti saranno utilizzati in forma aggregata ed esclusivamente per finalità statistiche")
 
     if 'submitted' not in st.session_state:
         st.session_state.submitted = False
@@ -82,6 +93,7 @@ def main():
             job = st.selectbox("Job", ["imprenditore", "top manager", "middle manager", "impiegato", "operaio", "tirocinante", "libero professionista"])
 
             st.subheader("Questionario")
+            st.info("Valuta le seguenti affermazioni su una scala da 1 (min) a 6 (max)")
             risposte = {}
             for i, item in enumerate(st.session_state.ordine):
                 risposte[item['testo']] = st.radio(item['testo'], [1,2,3,4,5,6], horizontal=True, key=f"q_{i}")
@@ -91,43 +103,42 @@ def main():
                     st.error("Inserisci un identificativo.")
                 else:
                     # Calcolo Medie
-                    medie = {f: np.mean([risposte[it['testo']] for it in ITEM_POOL if it['dim'] == f]) for f in FATTORI}
-                    
-                    # Preparazione riga dati
+                    medie = {f: np.mean([risposte[it['testo']] for it in ITEM_POOL if it['dim'] == f]) for f in DESCRIZIONI_RYFF.keys()}
                     riga_completa = [id_utente, gen, eta, edu, job] + [risposte[it['testo']] for it in ITEM_POOL]
                     
-                    # Tentativo salvataggio
-                    successo_online = salva_online(riga_completa)
-                    
-                    # Salvataggio in sessione
+                    st.session_state.successo_online = salva_online(riga_completa)
                     st.session_state.medie = medie
                     st.session_state.riga_completa = riga_completa
-                    st.session_state.successo_online = successo_online
                     st.session_state.submitted = True
                     st.rerun()
     else:
         # FEEDBACK
         if not st.session_state.successo_online:
-            st.warning("⚠️ Non è stato possibile salvare i dati nel database centralizzato. Puoi scaricare i tuoi risultati localmente usando il pulsante in fondo alla pagina.")
+            st.warning("⚠️ Salvataggio online non riuscito. Scarica i risultati localmente.")
         else:
-            st.success("✅ Dati salvati con successo nel database GENERA.")
+            st.success("✅ Dati archiviati con successo.")
 
         st.pyplot(genera_radar(st.session_state.medie))
         
+        # Analisi Descrittiva con spiegazioni
         res = sorted(st.session_state.medie.items(), key=lambda x: x[1], reverse=True)
-        st.write(f"### Risorse principali: **{res[0][0]}** e **{res[1][0]}**")
-        st.write(f"### Da rafforzare: **{res[-1][0]}** e **{res[-2][0]}**")
+        top_2 = res[:2]
+        bottom_2 = res[-2:]
 
-        # Download Sezione
-        df_download = pd.DataFrame([st.session_state.riga_completa], columns=COLONNE_ANAGRAFICA + COLONNE_ITEM)
+        st.markdown("### 🏆 Le tue risorse principali")
+        for dim, score in top_2:
+            st.markdown(f"**{dim}** (Punteggio: {score:.2f})")
+            st.write(f"_{DESCRIZIONI_RYFF[dim]}_")
+
+        st.markdown("### 🌱 Aree da rafforzare")
+        for dim, score in bottom_2:
+            st.markdown(f"**{dim}** (Punteggio: {score:.2f})")
+            st.write(f"_{DESCRIZIONI_RYFF[dim]}_")
+
+        # Pulsante Download
+        df_download = pd.DataFrame([st.session_state.riga_completa], columns=["identificativo", "genere", "età", "studio", "job"] + [it['testo'] for it in ITEM_POOL])
         csv = df_download.to_csv(index=False).encode('utf-8')
-        
-        st.download_button(
-            label="📥 Scarica i tuoi risultati (CSV)",
-            data=csv,
-            file_name=f"risultati_ryff_{st.session_state.riga_completa[0]}.csv",
-            mime="text/csv",
-        )
+        st.download_button("📥 Scarica Risultati (CSV)", csv, f"risultati_{st.session_state.riga_completa[0]}.csv", "text/csv")
 
         if st.button("Ricomincia"):
             st.session_state.submitted = False
